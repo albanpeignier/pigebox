@@ -1,0 +1,14 @@
+default		0
+timeout		5
+fallback	1
+
+color cyan/blue white/blue
+
+title		Debian GNU/Linux, kernel 2.6.26-2-686
+kernel		/boot/vmlinuz-2.6.26-2-686 root=/dev/hda ro 
+initrd		/boot/initrd.img-2.6.26-2-686
+
+title		Debian GNU/Linux, kernel 2.6.26-2-686 (single-user mode)
+kernel		/boot/vmlinuz-2.6.26-2-686 root=/dev/hda ro single
+initrd		/boot/initrd.img-2.6.26-2-686
+

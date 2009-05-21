@@ -1,0 +1,2 @@
+CONFIG_FILE=/etc/pige/alsa.backup.config
+START=true
