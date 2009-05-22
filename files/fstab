@@ -5,4 +5,5 @@ tmpfs     /var/lock tmpfs   defaults,noatime  0   0
 tmpfs     /var/tmp  tmpfs   defaults,noatime  0   0
 tmpfs     /var/etc  tmpfs   defaults,noatime  0   0
 tmpfs     /var/lib/dhcp3	tmpfs   defaults,noatime  0   0
+tmpfs     /var/lib/nginx	tmpfs   defaults,noatime  0   0
 tmpfs     /srv/pige	tmpfs   defaults,noatime  0   0

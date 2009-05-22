@@ -141,16 +141,30 @@ namespace :pigebox do
         chroot.sudo "ln -fs /usr/lib/libsndfile.so.1.0.17 /usr/lib/libsndfile.so"
         chroot.sudo "update-rc.d alsa.backup defaults"
       end
+    end
 
+    task :http do
+      image_chroot do |chroot|
+        chroot.apt_install %w{nginx}
+      end
+      install "etc/default/nginx", "nginx/nginx.default"
+      install "etc/nginx/sites-available/default", "nginx/default-site"
+      image_link "/srv/pige", "/var/www/pige"
     end
 
   end
 
-  task :configure => %w{kernel_img resolv_conf network fstab packages grub alsa_backup}.map { |t| "configure:"+t }
+  task :configure => %w{kernel_img resolv_conf network fstab packages grub alsa_backup http}.map { |t| "configure:"+t }
 
   namespace :dist do
 
-    task :iso do
+    task :clean do
+      image_chroot do |chroot|
+        chroot.sudo "apt-get clean"
+      end
+    end
+
+    task :iso => :clean do
       sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o #{@cache_dir}/pigebox.iso #{@image_dir}"
     end
 
