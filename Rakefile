@@ -131,8 +131,9 @@ namespace :pigebox do
 
       # TODO use a debian package
       image_chroot do |chroot|
-        chroot.apt_install %w{ruby-dev build-essential rake libasound2 libsndfile1 libdaemons-ruby1.8}
-        chroot.sudo "gem install --no-rdoc --no-ri ffi bones newgem cucumber SyslogLogger"
+        chroot.apt_install %w{ruby-dev build-essential rake libasound2 libsndfile1 libdaemons-ruby1.8 libffi-dev}
+
+        chroot.sudo "gem install --no-rdoc --no-ri ffi bones newgem cucumber SyslogLogger daemons"
         chroot.sudo "gem install --no-rdoc --no-ri --source=http://gems.github.com albanpeignier-alsa-backup"
 
         chroot.sudo "ln -fs /var/lib/gems/1.8/bin/alsa.backup /usr/bin/alsa.backup"
