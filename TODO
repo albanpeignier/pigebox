@@ -1,0 +1,2 @@
+* verify dhclient creates resolv.conf without problem
+* clean nginx site configuration
