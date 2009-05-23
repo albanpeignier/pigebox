@@ -70,7 +70,7 @@ namespace :pigebox do
 
   task :bootstrap do
     additional_packages = %w{rsyslog netbase ifupdown net-tools dhcp3-client ssh alsa-utils ruby rubygems}
-    sudo "debootstrap --variant=minbase --arch=i386 --include=#{additional_packages.join(',')} lenny #{@image_dir} http://localhost:9999/debian"
+    sudo "debootstrap --variant=minbase --arch=i386 --include=#{additional_packages.join(',')} lenny #{@image_dir} http://ftp.fr.debian.org/debian"
   end
 
   task :backup do
@@ -94,7 +94,12 @@ namespace :pigebox do
       install "etc/network", "network/interfaces"
 
       image_mkdir "root/.ssh"
-      install "root/.ssh/authorized_keys2", ENV['HOME'] + "/.ssh/id_rsa.pub"
+      if File.exists?(ENV['HOME'] + "/.ssh/id_rsa.pub")
+        pubkey = ENV['HOME'] + "/.ssh/id_rsa.pub"
+      else
+        pubkey = ENV['HOME'] + "/.ssh/id_dsa.pub"
+      end
+      install "root/.ssh/authorized_keys", pubkey
     end
 
     task :resolv_conf do
