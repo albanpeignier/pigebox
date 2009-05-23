@@ -1,0 +1,20 @@
+= PigeBox
+
+Free continuous recording solution
+
+== Components
+
+* Debian stable system
+* read-only root fs
+* dhcp network configuration
+* alsa continuous recording daemon (http://github.com/albanpeignier/alsabackup)
+* http access (nginx)
+
+For the moment :
+
+* memory storage
+* 15 minutes recording files
+
+== Distribution
+
+* iso image
