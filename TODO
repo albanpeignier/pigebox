@@ -1,2 +1,13 @@
 * verify dhclient creates resolv.conf without problem
+* mount existing filesystem (using a fstab LABEL= ?)
+* encode files (rake + sox ?)
+* delete older files (when /srv/pige df < 80% ?)
+* create needed log files, directories (nginx/, dmesg, ...)
+* create compact_flash distribution 
+   standard disk image like gepetto sandbox one ?
+   http://github.com/albanpeignier/gepetto/blob/master/tasks/sandbox.rake
+* refactor Rakefile to use a Rake::TaskLib class
 * clean nginx site configuration
+* install ntp
+* use avahi to publish zeroconf hostname (pigebox.local ?)
+* add ftp and rsync access (anonymous)
