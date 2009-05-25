@@ -1,4 +1,5 @@
 work_dir="/var/tmp/pigebox"
+debian_mirror="http://ftp.fr.debian.org/debian"
 @image_dir="#{work_dir}/image"
 @cache_dir=work_dir
 
@@ -72,8 +73,8 @@ namespace :pigebox do
 
   desc "Boostrap debian system in image directory"
   task :bootstrap do
-    additional_packages = %w{rsyslog netbase ifupdown net-tools dhcp3-client ssh alsa-utils ruby rubygems}
-    sudo "debootstrap --variant=minbase --arch=i386 --include=#{additional_packages.join(',')} lenny #{@image_dir} http://ftp.fr.debian.org/debian"
+    additional_packages = %w{rsyslog netbase ifupdown net-tools dhcp3-client ssh alsa-utils ruby rubygems ntpdate avahi-autoipd avahi-daemon}
+    sudo "debootstrap --variant=minbase --arch=i386 --include=#{additional_packages.join(',')} lenny #{@image_dir} #{debian_mirror}"
   end
 
   desc "Save the current image directory in tar archive"
