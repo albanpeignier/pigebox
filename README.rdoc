@@ -40,3 +40,12 @@ See +rake -T+ for tasks details :
   rake pigebox:dist:iso   # Create an iso file from pigebox image
   rake pigebox:restore    # Restore the image directory with existing tar archive
   rake pigebox:setup      # Install some of required tools to create pigebox image
+
+== Boot
+
+For the moment, an iso image is builded. You can test it with qemu :
+
+  sudo apt-get install qemu kqemu-source
+  sudo module-assistant a-i kqemu
+
+  ./script/boot

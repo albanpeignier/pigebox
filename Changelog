@@ -1,5 +1,6 @@
 pigebox - 0.0.2
 
+  * create script/boot to start iso with qemu
   * first documentation
 
 pigebox - 0.0.1 - 22 May 2009
