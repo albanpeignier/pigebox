@@ -59,24 +59,29 @@ end
 
 namespace :pigebox do
 
+  desc "Install some of required tools to create pigebox image"
   task :setup do
     required_packages = %w{debootstrap mkisofs}
     sudo "apt-get install #{required_packages.join(' ')}"
   end
 
+  desc "Clean image temporary directory"
   task :clean do
     sudo "rm -rf #{@image_dir}"
   end
 
+  desc "Boostrap debian system in image directory"
   task :bootstrap do
     additional_packages = %w{rsyslog netbase ifupdown net-tools dhcp3-client ssh alsa-utils ruby rubygems}
     sudo "debootstrap --variant=minbase --arch=i386 --include=#{additional_packages.join(',')} lenny #{@image_dir} http://localhost:9999/debian"
   end
 
+  desc "Save the current image directory in tar archive"
   task :backup do
     sudo "tar -cf #{@cache_dir}/image.tar -C #{@image_dir} ."
   end
 
+  desc "Restore the image directory with existing tar archive"
   task :restore => :clean do
     mkdir_p @image_dir
     sudo "tar -xf #{@cache_dir}/image.tar -C #{@image_dir} ."
@@ -154,6 +159,7 @@ namespace :pigebox do
 
   end
 
+  desc "Configure the pigebox image"
   task :configure => %w{kernel_img resolv_conf network fstab packages grub alsa_backup http}.map { |t| "configure:"+t }
 
   namespace :dist do
@@ -164,6 +170,7 @@ namespace :pigebox do
       end
     end
 
+    desc "Create an iso file from pigebox image"
     task :iso => :clean do
       sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o #{@cache_dir}/pigebox.iso #{@image_dir}"
     end

@@ -18,3 +18,25 @@ For the moment :
 == Distribution
 
 * iso image
+
+== Build
+
+To create quickly a first image :
+
+  rake pigebox:setup pigebox:rebuild
+
+The image can be backup and restored to save bootstrap time :
+
+  rake pigebox:bootstrap pigebox:backup
+  # Then as many times as you need :
+  rake pigebox:restore pigebox:configure pigebox:dist:iso
+
+See +rake -T+ for tasks details :
+
+  rake pigebox:backup     # Save the current image directory in tar archive
+  rake pigebox:bootstrap  # Boostrap debian system in image directory
+  rake pigebox:clean      # Clean image temporary directory
+  rake pigebox:configure  # Configure the pigebox image
+  rake pigebox:dist:iso   # Create an iso file from pigebox image
+  rake pigebox:restore    # Restore the image directory with existing tar archive
+  rake pigebox:setup      # Install some of required tools to create pigebox image
