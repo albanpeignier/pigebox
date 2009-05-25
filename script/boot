@@ -1,0 +1,2 @@
+#!/bin/sh
+exec qemu -drive file=/var/tmp/pigebox/pigebox.iso,if=ide,index=0,media=cdrom

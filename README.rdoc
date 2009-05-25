@@ -1,0 +1,51 @@
+= PigeBox
+
+Free continuous recording solution
+
+== Components
+
+* Debian stable system
+* read-only root fs
+* dhcp network configuration
+* alsa continuous recording daemon (http://github.com/albanpeignier/alsabackup)
+* http access (nginx)
+
+For the moment :
+
+* memory storage
+* 15 minutes recording files
+
+== Distribution
+
+* iso image
+
+== Build
+
+To create quickly a first image :
+
+  rake pigebox:setup pigebox:rebuild
+
+The image can be backup and restored to save bootstrap time :
+
+  rake pigebox:bootstrap pigebox:backup
+  # Then as many times as you need :
+  rake pigebox:restore pigebox:configure pigebox:dist:iso
+
+See +rake -T+ for tasks details :
+
+  rake pigebox:backup     # Save the current image directory in tar archive
+  rake pigebox:bootstrap  # Boostrap debian system in image directory
+  rake pigebox:clean      # Clean image temporary directory
+  rake pigebox:configure  # Configure the pigebox image
+  rake pigebox:dist:iso   # Create an iso file from pigebox image
+  rake pigebox:restore    # Restore the image directory with existing tar archive
+  rake pigebox:setup      # Install some of required tools to create pigebox image
+
+== Boot
+
+For the moment, an iso image is builded. You can test it with qemu :
+
+  sudo apt-get install qemu kqemu-source
+  sudo module-assistant a-i kqemu
+
+  ./script/boot
