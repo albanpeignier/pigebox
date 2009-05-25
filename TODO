@@ -13,3 +13,4 @@
 * install ntp
 * use avahi to publish zeroconf hostname (pigebox.local ?)
 * add ftp and rsync access (anonymous)
+* munin-node and nagios nrpe
