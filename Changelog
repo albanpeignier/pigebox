@@ -1,0 +1,11 @@
+pigebox - 0.0.2
+
+  * first documentation
+
+pigebox - 0.0.1 - 22 May 2009
+
+  * debian bootstrap
+  * basic dhcp network configuration
+  * install alsa.backup github gem
+  * mount /srv/pige in tmpfs
+  * install nginx
