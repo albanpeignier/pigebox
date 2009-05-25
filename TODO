@@ -1,4 +1,6 @@
+* make configurable the debian mirror
 * verify dhclient creates resolv.conf without problem
+* use a dedicated user (pige ?) for daemons and scripts
 * mount existing filesystem (using a fstab LABEL= ?)
 * encode files (rake + sox ?)
 * delete older files (when /srv/pige df < 80% ?)
