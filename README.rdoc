@@ -12,6 +12,20 @@ Free continuous recording solution
 * http access (nginx)
 * ssh access
 
+== Network
+
+The network configuration is retrieved by dhcp at boot. 
+The zeroconf hostname +pigebox.local+ is published on the network.
+
+The box is reachable via :
+
+* ssh root@pigebox.local
+* http://pigebox.local
+
+The record files are available via :
+
+* http://pigebox.local/pige/
+
 == Storage
 
 * disk storage
@@ -28,7 +42,15 @@ For example, to create your storage filesystem :
   # mke2fs -L pige -j /dev/sda1
   # mount /srv/pige
 
-The alsa.backup will detect automatically the new mount.
+The alsa.backup daemon will detect automatically the new mount.
+
+== Log
+
+alsa.backup daemon and cron log messages in syslog.
+
+For the moment, it requires an ssh session :
+
+  ssh root@pigebox.local tail -f /var/log/syslog
 
 == Distribution
 

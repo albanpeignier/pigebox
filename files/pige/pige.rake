@@ -1,6 +1,19 @@
 require 'rake/tasklib'
 require 'find'
 
+require 'rubygems'
+require 'syslog_logger'
+
+module PigeCron
+  @logger = SyslogLogger.new('pige.cron').tap do |logger|
+    logger.level = Logger::INFO
+  end
+
+  def self.logger
+    @logger
+  end
+end
+
 class Numeric
 
   def gigabytes
@@ -24,16 +37,16 @@ class Cleaner
 
   def clean(dry_run = true)
     unless File.exists?(@directory)
-      puts "Can't find the directory to clean: #{directory}"
+      PigeCron.logger.warn "Can't find the directory to clean: #{directory}"
       return
     end
       
-    puts "Free space: #{free_space.in_gigabytes} gigabytes"
-    puts "Minimum free space: #{minimum_free_space.in_gigabytes}"
+    PigeCron.logger.info "Free space: #{free_space.in_gigabytes} gigabytes"
+    PigeCron.logger.debug { "Minimum free space: #{minimum_free_space.in_gigabytes}" }
 
     if free_space < minimum_free_space
       older_files('*.wav', 1).each do |file|
-        puts "delete #{file}"
+        PigeCron.logger.info "delete #{file}"
         File.delete(file) unless dry_run
       end
     end
