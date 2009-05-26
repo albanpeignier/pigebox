@@ -1,16 +1,14 @@
-* make configurable the debian mirror : DONE
+* add ntp to ntpdate
 * verify dhclient creates resolv.conf without problem
 * use a dedicated user (pige ?) for daemons and scripts
-* mount existing filesystem (using a fstab LABEL= ?)
 * encode files (rake + sox ?)
-* delete older files (when /srv/pige df < 80% ?)
+* delete old encoded files
+* provide a storage init script (fdisk, mke2fs, mount, ...)
 * create needed log files, directories (nginx/, dmesg, ...)
 * create compact_flash distribution 
    standard disk image like gepetto sandbox one ?
    http://github.com/albanpeignier/gepetto/blob/master/tasks/sandbox.rake
 * refactor Rakefile to use a Rake::TaskLib class
 * clean nginx site configuration
-* install ntp : DONE (ntpdate)
-* use avahi to publish zeroconf hostname (pigebox.local ?) : DONE
 * add ftp and rsync access (anonymous)
 * munin-node and nagios nrpe
