@@ -1,0 +1,2 @@
+#!/bin/sh
+rake --rakefile /usr/share/pige/tasks/pige.rake pige:clean

@@ -72,8 +72,8 @@ namespace :pigebox do
 
   desc "Boostrap debian system in image directory"
   task :bootstrap do
-    additional_packages = %w{rsyslog netbase ifupdown net-tools dhcp3-client ssh alsa-utils ruby rubygems}
-    sudo "debootstrap --variant=minbase --arch=i386 --include=#{additional_packages.join(',')} lenny #{@image_dir} http://ftp.fr.debian.org/debian"
+    additional_packages = %w{rsyslog netbase ifupdown net-tools dhcp3-client ssh alsa-utils ruby rubygems cron}
+    sudo "debootstrap --variant=minbase --arch=i386 --include=#{additional_packages.join(',')} lenny #{@image_dir} http://localhost:9999/debian"
   end
 
   desc "Save the current image directory in tar archive"
@@ -153,6 +153,17 @@ namespace :pigebox do
       end
     end
 
+    task :pige_cron do
+      # TODO create a debian package 'pige'
+      image_mkdir "/usr/share/pige/tasks"
+      install "/usr/share/pige/tasks", "pige/pige.rake"
+
+      image_mkdir "/usr/share/pige/bin"
+      install "/usr/share/pige/bin", "pige/pige.cron.hourly"
+
+      image_link "/usr/share/pige/bin/pige.cron.hourly", "/etc/cron.hourly/pige"
+    end
+
     task :http do
       image_chroot do |chroot|
         chroot.apt_install %w{nginx}
@@ -165,7 +176,7 @@ namespace :pigebox do
   end
 
   desc "Configure the pigebox image"
-  task :configure => %w{kernel_img resolv_conf network fstab packages grub alsa_backup http}.map { |t| "configure:"+t }
+  task :configure => %w{kernel_img resolv_conf network fstab packages grub alsa_backup pige_cron http}.map { |t| "configure:"+t }
 
   namespace :dist do
 
