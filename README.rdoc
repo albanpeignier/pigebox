@@ -7,13 +7,28 @@ Free continuous recording solution
 * Debian stable system
 * read-only root fs
 * dhcp network configuration
+* zeroconf hostname (avahi)
 * alsa continuous recording daemon (http://github.com/albanpeignier/alsabackup)
 * http access (nginx)
+* ssh access
 
-For the moment :
+== Storage
 
-* memory storage
+* disk storage
 * 15 minutes recording files
+* automatic cleaning of older files
+
+The storage filesystem must have the label 'pige'. 
+For example, to create your storage filesystem :
+
+  $ ssh root@pigebox.local
+
+  # fdisk /dev/sda
+  ...
+  # mke2fs -L pige -j /dev/sda1
+  # mount /srv/pige
+
+The alsa.backup will detect automatically the new mount.
 
 == Distribution
 
