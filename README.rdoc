@@ -23,6 +23,8 @@ For the moment :
 
 To create quickly a first image :
 
+  cp deb_mirror.conf.sample deb_mirror.conf
+  #edit the deb_mirror.conf according to your location
   rake pigebox:setup pigebox:rebuild
 
 The image can be backup and restored to save bootstrap time :
