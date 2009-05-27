@@ -1,0 +1,42 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          preparelogs
+# Required-Start:    $local_fs
+# Required-Stop:
+# Should-Start:      
+# Default-Start:     S
+# Default-Stop:
+# Short-Description: Miscellaneous things to be done during bootup on pigebox.
+# Description:       Create missing directories due to tmpfs.
+### END INIT INFO
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+. /lib/init/vars.sh
+
+do_start () {
+    touch /var/log/dmesg
+    mkdir /var/log/nginx /var/log/munin
+
+    chown munin /var/log/munin /var/lib/munin /var/www/munin
+    # run munin to avoid empty /var/www/munin directory
+    su -s /bin/sh munin /usr/bin/munin-cron
+}
+
+case "$1" in
+  start|"")
+	do_start
+	;;
+  restart|reload|force-reload)
+	echo "Error: argument '$1' not supported" >&2
+	exit 3
+	;;
+  stop)
+	# No-op
+	;;
+  *)
+	echo "Usage: preparelogs [start|stop]" >&2
+	exit 3
+	;;
+esac
+
+:

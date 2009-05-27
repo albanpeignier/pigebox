@@ -44,7 +44,17 @@ For example, to create your storage filesystem :
 
 The alsa.backup daemon will detect automatically the new mount.
 
-== Log
+== Monitoring
+
+=== Munin
+
+A munin node is started at boot. 
+
+Graphs are available on http://pigebox.local/munin/. These statistics are reset at each reboot.
+
+For persistent statistics, use a external munin manager by adding a node for pigebox.local.
+
+=== Log
 
 alsa.backup daemon and cron log messages in syslog.
 

@@ -1,5 +1,8 @@
 pigebox - 0.0.2
 
+  * add munin and munin-node
+  * delete older wav files hourly
+  * use fs LABEL=pige for storage
   * create script/boot to start iso with qemu
   * first documentation
 

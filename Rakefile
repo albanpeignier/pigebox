@@ -118,6 +118,11 @@ namespace :pigebox do
       image_mkdir "/srv/pige"
       install "etc", "fstab"
       image_link "/proc/mounts", "/etc/mtab"
+
+      install "etc/init.d/preparetmpfs", "init.d/preparetmpfs"
+      image_chroot do |chroot|
+        chroot.sudo "update-rc.d preparetmpfs defaults 15"
+      end
     end
 
     task :packages do
@@ -169,15 +174,22 @@ namespace :pigebox do
       image_chroot do |chroot|
         chroot.apt_install %w{nginx}
       end
-      install "etc/default/nginx", "nginx/nginx.default"
       install "etc/nginx/sites-available/default", "nginx/default-site"
       image_link "/srv/pige", "/var/www/pige"
+    end
+
+    task :munin do
+      image_chroot do |chroot|
+        chroot.apt_install %w{munin munin-node}
+      end
+      install "etc/munin", "munin/munin-node.conf", "munin/munin.conf"
+      image_link "/usr/share/munin/plugins/df", "/etc/munin/plugins/df"
     end
 
   end
 
   desc "Configure the pigebox image"
-  task :configure => %w{kernel_img resolv_conf network fstab packages grub alsa_backup pige_cron http}.map { |t| "configure:"+t }
+  task :configure => %w{kernel_img resolv_conf network fstab packages grub alsa_backup pige_cron http munin}.map { |t| "configure:"+t }
 
   namespace :dist do
 
