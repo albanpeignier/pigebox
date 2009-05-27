@@ -5,7 +5,7 @@ require 'rubygems'
 require 'syslog_logger'
 
 module PigeCron
-  @logger = SyslogLogger.new('pige.cron').tap do |logger|
+  @logger = SyslogLogger.new('pige-cron').tap do |logger|
     logger.level = Logger::INFO
   end
 
@@ -41,11 +41,11 @@ class Cleaner
       return
     end
       
-    PigeCron.logger.info "Free space: #{free_space.in_gigabytes} gigabytes"
-    PigeCron.logger.debug { "Minimum free space: #{minimum_free_space.in_gigabytes}" }
+    PigeCron.logger.info "free space: #{free_space.in_gigabytes} gigabytes"
+    PigeCron.logger.debug { "minimum free space: #{minimum_free_space.in_gigabytes}" }
 
-    if free_space < minimum_free_space
-      older_files('*.wav', 1).each do |file|
+    while free_space < minimum_free_space
+      older_files('*.wav', 4).each do |file|
         PigeCron.logger.info "delete #{file}"
         File.delete(file) unless dry_run
       end
@@ -77,7 +77,7 @@ class Cleaner
   end
 
   def minimum_free_space
-    [1.gigabytes, total_space * 0.1].min
+    @minimum_free_space ||= [1.gigabytes, total_space * 0.1].min
   end
 
 end
@@ -89,7 +89,7 @@ namespace :pige do
   end
 
   task :clean do
-    Cleaner.new('/srv/pige').clean
+    Cleaner.new('/srv/pige').clean(false)
   end
 
 end

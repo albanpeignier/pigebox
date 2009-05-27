@@ -165,9 +165,8 @@ namespace :pigebox do
       install "/usr/share/pige/tasks", "pige/pige.rake"
 
       image_mkdir "/usr/share/pige/bin"
-      install "/usr/share/pige/bin", "pige/pige.cron.hourly"
-
-      image_link "/usr/share/pige/bin/pige.cron.hourly", "/etc/cron.hourly/pige"
+      install "/usr/share/pige/bin/", "pige/pige-cron"
+      install "/etc/cron.d/pige", "pige/pige.cron.d"
     end
 
     task :http do
