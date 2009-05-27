@@ -70,15 +70,18 @@ For the moment, it requires an ssh session :
 
 To create quickly a first image :
 
-  cp deb_mirror.conf.sample deb_mirror.conf
-  #edit the deb_mirror.conf according to your location
-  rake pigebox:setup pigebox:rebuild
+  rake setup pigebox:rebuild
 
 The image can be backup and restored to save bootstrap time :
 
   rake pigebox:bootstrap pigebox:backup
   # Then as many times as you need :
   rake pigebox:restore pigebox:configure pigebox:dist:iso
+
+You can configure the build with using a +config+ file :
+
+  ImageBuilder.default_debian_mirror = "http://localhost:9999/debian"
+  ImageBuilder.ssh_pubkey = ENV['HOME'] + "/.ssh/another_id_rsa.pub"
 
 See +rake -T+ for tasks details :
 
@@ -88,7 +91,7 @@ See +rake -T+ for tasks details :
   rake pigebox:configure  # Configure the pigebox image
   rake pigebox:dist:iso   # Create an iso file from pigebox image
   rake pigebox:restore    # Restore the image directory with existing tar archive
-  rake pigebox:setup      # Install some of required tools to create pigebox image
+  rake setup              # Install some of required tools to create pigebox image
 
 == Boot
 
