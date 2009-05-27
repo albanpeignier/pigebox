@@ -127,6 +127,7 @@ class ImageBuilder < Rake::TaskLib
 
       desc "Boostrap debian system in image directory"
       task :bootstrap do
+        mkdir_p cache_dir
         sudo "debootstrap --variant=minbase --arch=i386 --include=#{additional_packages.join(',')} lenny #{image_dir} #{debian_mirror}"
       end
 
@@ -161,7 +162,7 @@ class ImageBuilder < Rake::TaskLib
 
         desc "Create a compressed iso file"
         task :iso_bz => :iso do
-          sh "bzip -c #{iso_file} > #{iso_file}.bz"
+          sh "bzip2 -c #{iso_file} > #{iso_file}.bz"
         end
 
       end
