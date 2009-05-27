@@ -80,9 +80,24 @@ See +rake -T+ for tasks details :
 
 == Boot
 
-For the moment, an iso image is builded. You can test it with qemu :
+For the moment, an iso image is builded. You can test it with qemu.
+
+Install qemu and its module:
 
   sudo apt-get install qemu kqemu-source
   sudo module-assistant a-i kqemu
 
+Create an empty disk:
+
+  qemu-img create -f qcow2 /var/tmp/pigebox/disk.img 3G
+
+You will need to initialize the pige storage after first boot (see Storage section).
+
+Create a tap0 network interface:
+
+  sudo tunctl -u $USER -t tap0
+
+Start qemu vm:
+
   ./script/boot
+
