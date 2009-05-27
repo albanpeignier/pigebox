@@ -1,5 +1,6 @@
 pigebox - 0.0.2
 
+  * add ntpdate and ntp
   * add munin and munin-node
   * delete older wav files hourly
   * use fs LABEL=pige for storage
