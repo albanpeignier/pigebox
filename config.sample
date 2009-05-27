@@ -1,0 +1,3 @@
+ImageBuilder.default_debian_mirror = "http://localhost:9999/debian"
+ImageBuilder.ssh_pubkey = ENV['HOME'] + "/.ssh/another_id_rsa.pub"
+

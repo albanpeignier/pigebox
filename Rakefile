@@ -1,163 +1,221 @@
-work_dir="/var/tmp/pigebox"
-debian_mirror="http://ftp.fr.debian.org/debian"
-
-if File.exists?('deb_mirror.conf')
-  puts "***using deb_mirror.conf file"
-  load 'deb_mirror.conf'
-end
-
-@image_dir="#{work_dir}/image"
-@cache_dir=work_dir
-
-def sudo(*arguments)
-  sh "sudo -H #{arguments.join(' ')}"
-end
-
-def file(name)
-  File.join("files", name)
-end
-
-def image_file(name)
-  File.join(@image_dir, name)
-end
-
-def install(target, *sources)
-  file_sources = sources.collect { |s| s.start_with?('/') ? s : file(s) }
-  sudo "cp --preserve=mode,timestamps #{file_sources.join(' ')} #{image_file(target)}"
-end
-
-def image_mkdir(directory)
-  directory = image_file(directory)
-  sudo "mkdir -p #{directory}" unless File.exists?(directory)
-end
-
-def image_link(source, target)
-  sudo "chroot #{@image_dir} sh -c \"ln -fs #{source} #{target}\""
-end
-
-def image_prepare_run
-  sudo "mount proc #{image_file('proc')} -t proc"
-end
-
-def image_unprepare_run
-	sudo "umount #{image_file('proc')}"
-end
-
-class Chroot
-  def initialize(root)
-    @root = root
-  end
-  def apt_install(*packages)
-    sudo "apt-get install --yes --force-yes #{packages.join(' ')}"
-  end
-  def sudo(command)
-    super "chroot #{@root} sh -c \"#{command}\""
+module ShellUtils
+  def sudo(*arguments)
+    sh "sudo -H #{arguments.join(' ')}"
   end
 end
 
-def image_chroot(&block)
-  begin
-    image_prepare_run
-    yield Chroot.new(@image_dir)
-  ensure
-    image_unprepare_run
-  end
-end
+include ShellUtils
+require 'rake/tasklib'
 
-namespace :pigebox do
+class ImageBuilder < Rake::TaskLib
+  include ShellUtils
 
-  desc "Install some of required tools to create pigebox image"
-  task :setup do
-    required_packages = %w{debootstrap mkisofs}
-    sudo "apt-get install #{required_packages.join(' ')}"
+  @@default_debian_mirror= "http://fr.ftp.debian.org/debian"
+  @@ssh_pubkey = Dir["#{ENV['HOME']}/.ssh/id_*pub"].first
+
+  def self.default_debian_mirror=(default_debian_mirror)
+    @@default_debian_mirror=default_debian_mirror
   end
 
-  desc "Clean image temporary directory"
-  task :clean do
-    sudo "rm -rf #{@image_dir}"
+  def self.ssh_pubkey=(ssh_pubkey)
+    @@ssh_pubkey=ssh_pubkey
   end
 
-  desc "Boostrap debian system in image directory"
-  task :bootstrap do
-    additional_packages = %w{rsyslog netbase ifupdown net-tools dhcp3-client ssh alsa-utils ruby rubygems ntpdate ntp avahi-autoipd avahi-daemon cron}
-    sudo "debootstrap --variant=minbase --arch=i386 --include=#{additional_packages.join(',')} lenny #{@image_dir} #{debian_mirror}"
+  attr_accessor :name, :image_dir, :cache_dir, :debian_mirror, :additional_packages, :ssh_pubkey
+
+  def initialize(name = :pigebox)
+    @name = name
+
+    work_dir="/var/tmp/#{name}"
+    @image_dir= "#{work_dir}/image"
+    @cache_dir= work_dir
+
+    @additional_packages =
+      %w{cron} + # base system
+      %w{rsyslog netbase ifupdown net-tools dhcp3-client} + # base network
+      %w{ssh ntp ntpdate avahi-autoipd avahi-daemon} + # network services
+      %w{alsa-utils} + # base sound
+      %w{ruby rubygems} # live origin :)
+
+    yield self if block_given?
+    define
   end
 
-  desc "Save the current image directory in tar archive"
-  task :backup do
-    sudo "tar -cf #{@cache_dir}/image.tar -C #{@image_dir} ."
+  def debian_mirror
+    @debian_mirror || @@default_debian_mirror
   end
 
-  desc "Restore the image directory with existing tar archive"
-  task :restore => :clean do
-    mkdir_p @image_dir
-    sudo "tar -xf #{@cache_dir}/image.tar -C #{@image_dir} ."
+  def ssh_pubkey
+    @@ssh_pubkey
+  end  
+
+  def image_tar
+    "#{cache_dir}/image.tar"
   end
 
-  namespace :configure do
+  def image_file(name)
+    File.join(image_dir, name)
+  end
 
-    task :kernel_img do
+  def install(target, *sources)
+    file_sources = sources.collect { |s| s.start_with?('/') ? s : File.join("files", s) }
+    sudo "cp --preserve=mode,timestamps #{file_sources.join(' ')} #{image_file(target)}"
+  end
+
+  def mkdir(directory)
+    directory = image_file(directory)
+    sudo "mkdir -p #{directory}" unless File.exists?(directory)
+  end
+
+  class Chroot
+    def initialize(image)
+      @image = image
+    end
+    def apt_install(*packages)
+      sudo "apt-get install --yes --force-yes #{packages.join(' ')}"
+    end
+    def sh(*arguments)
+      @image.sudo "chroot #{@image.image_dir} sh -c \"LC_ALL=C #{arguments.join(' ')}\""
+    end
+    alias_method :sudo, :sh
+  end
+
+  def chroot(*arguments, &block)
+    @chroot ||= Chroot.new(self)
+
+    unless block_given?
+      @chroot.sh *arguments
+    else
+      begin
+        prepare_run
+        yield @chroot
+      ensure
+        unprepare_run
+      end
+    end
+  end
+
+  def prepare_run
+    sudo "mount proc #{image_file('proc')} -t proc"
+  end
+
+  def unprepare_run
+    sudo "umount #{image_file('proc')}"
+  end
+
+  def iso_file
+    "#{cache_dir}/#{name}.iso"
+  end
+
+  def define
+    namespace name do
+      desc "Clean image temporary directory"
+      task :clean do
+        sudo "rm -rf #{image_dir}"
+      end
+
+      desc "Boostrap debian system in image directory"
+      task :bootstrap do
+        sudo "debootstrap --variant=minbase --arch=i386 --include=#{additional_packages.join(',')} lenny #{image_dir} #{debian_mirror}"
+      end
+
+      desc "Save the current image directory in tar archive"
+      task :backup do
+        sudo "tar -cf #{image_tar} -C #{image_dir} ."
+      end
+
+      desc "Restore the image directory with existing tar archive"
+      task :restore => :clean do
+        mkdir_p image_dir
+        sudo "tar -xf #{image_tar} -C #{image_dir} ."
+      end
+
+      desc "Create local link to image directory"
+      task :link do
+        sh "ln -fs #{image_dir} #{name}"
+      end
+
+      namespace :dist do
+
+        task :clean do
+          chroot do |chroot|
+            chroot.sudo "apt-get clean"
+          end
+        end
+
+        desc "Create an iso file from pigebox image"
+        task :iso => :clean do
+          sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o #{iso_file} #{image_dir}"
+        end
+
+      end
+
+      desc "Configure the pigebox image"
+      task :configure
+      # Dependencies with configure helper below
+
+      task :rebuild => [ :clean, :bootstrap, :configure, "dist:iso" ]
+
+    end
+
+    configure :kernel_img do
       install "etc", "kernel-img.conf"
     end
 
-    task :network do
+    configure :network do
       install "etc", "hosts", "hostname"
-
       install "etc/network", "network/interfaces"
-
-      image_mkdir "root/.ssh"
-      if File.exists?(ENV['HOME'] + "/.ssh/id_rsa.pub")
-        pubkey = ENV['HOME'] + "/.ssh/id_rsa.pub"
-      else
-        pubkey = ENV['HOME'] + "/.ssh/id_dsa.pub"
+      
+      if ssh_pubkey
+        mkdir "root/.ssh"
+        install "root/.ssh/authorized_keys", ssh_pubkey
       end
-      install "root/.ssh/authorized_keys", pubkey
     end
 
-    task :resolv_conf do
-      image_mkdir "/var/etc"
+    configure :resolv_conf do
+      mkdir "/var/etc"
       install "/var/etc", "/etc/resolv.conf"
-      image_link "/var/etc/resolv.conf", "/etc/resolv.conf"
+      link "/var/etc/resolv.conf", "/etc/resolv.conf"
     end
 
-    task :fstab do
-      image_mkdir "/srv/pige"
+    configure :fstab do
+      mkdir "/srv/pige"
       install "etc", "fstab"
-      image_link "/proc/mounts", "/etc/mtab"
-
+      link "/proc/mounts", "/etc/mtab"
+      
       install "etc/init.d/preparetmpfs", "init.d/preparetmpfs"
-      image_chroot do |chroot|
+      chroot do |chroot|
         chroot.sudo "update-rc.d preparetmpfs defaults 15"
       end
     end
 
-    task :packages do
+    configure :packages do
       packages = %w{linux-image-2.6-686 grub}
-      image_chroot do |chroot|
+      chroot do |chroot|
         chroot.sudo "apt-get update"
         chroot.apt_install packages
         chroot.sudo "apt-get clean"
       end
     end
 
-    task :grub do
-      image_mkdir "boot/grub"
+    configure :grub do
+      mkdir "boot/grub"
       install "boot/grub", "grub/menu.lst", image_file('/usr/lib/grub/i386-pc/stage2_eltorito')
     end
 
-    task :alsa_backup do
-      image_mkdir "etc/pige"
+    configure :alsa_backup do
+      mkdir "etc/pige"
       install "etc/pige", "pige/alsa.backup.config"
       install "etc/init.d/alsa.backup", "pige/alsa.backup.init.d"
       install "etc/default/alsa.backup", "pige/alsa.backup.default"
 
       # TODO use a debian package
-      image_chroot do |chroot|
+      chroot do |chroot|
         chroot.apt_install %w{ruby-dev build-essential rake libasound2 libsndfile1 libdaemons-ruby1.8 libffi-dev}
-
+        
         chroot.sudo "gem install --no-rdoc --no-ri ffi bones newgem cucumber SyslogLogger daemons"
         chroot.sudo "gem install --no-rdoc --no-ri --source=http://gems.github.com albanpeignier-alsa-backup"
-
+        
         chroot.sudo "ln -fs /var/lib/gems/1.8/bin/alsa.backup /usr/bin/alsa.backup"
         chroot.sudo "ln -fs /usr/lib/libasound.so.2.0.0 /usr/lib/libasound.so"
         chroot.sudo "ln -fs /usr/lib/libsndfile.so.1.0.17 /usr/lib/libsndfile.so"
@@ -165,52 +223,50 @@ namespace :pigebox do
       end
     end
 
-    task :pige_cron do
+    configure :pige_cron do
       # TODO create a debian package 'pige'
-      image_mkdir "/usr/share/pige/tasks"
+      mkdir "/usr/share/pige/tasks"
       install "/usr/share/pige/tasks", "pige/pige.rake"
-
-      image_mkdir "/usr/share/pige/bin"
+      
+      mkdir "/usr/share/pige/bin"
       install "/usr/share/pige/bin/", "pige/pige-cron"
       install "/etc/cron.d/pige", "pige/pige.cron.d"
     end
-
-    task :http do
-      image_chroot do |chroot|
+    
+    configure :http do
+      chroot do |chroot|
         chroot.apt_install %w{nginx}
       end
       install "etc/nginx/sites-available/default", "nginx/default-site"
-      image_link "/srv/pige", "/var/www/pige"
+      link "/srv/pige", "/var/www/pige"
     end
-
-    task :munin do
-      image_chroot do |chroot|
+    
+    configure :munin do
+      chroot do |chroot|
         chroot.apt_install %w{munin munin-node}
       end
       install "etc/munin", "munin/munin-node.conf", "munin/munin.conf"
-      image_link "/usr/share/munin/plugins/df", "/etc/munin/plugins/df"
+      link "/usr/share/munin/plugins/df", "/etc/munin/plugins/df"
     end
-
   end
 
-  desc "Configure the pigebox image"
-  task :configure => %w{kernel_img resolv_conf network fstab packages grub alsa_backup pige_cron http munin}.map { |t| "configure:"+t }
-
-  namespace :dist do
-
-    task :clean do
-      image_chroot do |chroot|
-        chroot.sudo "apt-get clean"
+  def configure(task_name, &block)
+    namespace name do
+      namespace :configure do
+        task task_name, &block
       end
+      task :configure => "configure:#{task_name}"
     end
-
-    desc "Create an iso file from pigebox image"
-    task :iso => :clean do
-      sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o #{@cache_dir}/pigebox.iso #{@image_dir}"
-    end
-
   end
 
-  task :rebuild => [ :clean, :bootstrap, :configure, "dist:iso" ]
+end
 
+load 'config' if File.exists?('config')
+
+ImageBuilder.new(:pigebox)
+
+desc "Install some of required tools to create pigebox images"
+task :setup do
+  required_packages = %w{debootstrap mkisofs}
+  sudo "apt-get install #{required_packages.join(' ')}"
 end
