@@ -71,13 +71,24 @@ class ImageBuilder < Rake::TaskLib
     def initialize(image)
       @image = image
     end
+
     def apt_install(*packages)
       sudo "apt-get install --yes --force-yes #{packages.join(' ')}"
     end
+
     def sh(*arguments)
       @image.sudo "chroot #{@image.image_dir} sh -c \"LC_ALL=C #{arguments.join(' ')}\""
     end
     alias_method :sudo, :sh
+
+    def gem_install(*packages)
+      packages = packages.flatten
+      options = Hash === packages.last ? packages.pop : {}
+      install_arguments = options.collect { |key, value| "--#{key}=#{value}" }.join(' ')
+
+      # TODO use 'gem list -i #{package}' but it didn't work this evening
+      sh "gem install --no-rdoc --no-ri #{install_arguments} #{packages.join(' ')}"
+    end
   end
 
   def chroot(*arguments, &block)
@@ -148,6 +159,11 @@ class ImageBuilder < Rake::TaskLib
           sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o #{iso_file} #{image_dir}"
         end
 
+        desc "Create a compressed iso file"
+        task :iso_bz => :iso do
+          sh "bzip -c #{iso_file} > #{iso_file}.bz"
+        end
+
       end
 
       desc "Configure the pigebox image"
@@ -213,8 +229,8 @@ class ImageBuilder < Rake::TaskLib
       chroot do |chroot|
         chroot.apt_install %w{ruby-dev build-essential rake libasound2 libsndfile1 libdaemons-ruby1.8 libffi-dev}
         
-        chroot.sudo "gem install --no-rdoc --no-ri ffi bones newgem cucumber SyslogLogger daemons"
-        chroot.sudo "gem install --no-rdoc --no-ri --source=http://gems.github.com albanpeignier-alsa-backup"
+        chroot.gem_install %w{ffi bones newgem cucumber SyslogLogger daemons}
+        chroot.gem_install "albanpeignier-alsa-backup", :source => "http://gems.github.com"
         
         chroot.sudo "ln -fs /var/lib/gems/1.8/bin/alsa.backup /usr/bin/alsa.backup"
         chroot.sudo "ln -fs /usr/lib/libasound.so.2.0.0 /usr/lib/libasound.so"
