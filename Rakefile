@@ -62,6 +62,10 @@ class ImageBuilder < Rake::TaskLib
     sudo "cp --preserve=mode,timestamps #{file_sources.join(' ')} #{image_file(target)}"
   end
 
+  def link(source, target)
+    chroot "ln -fs #{source} #{target}"
+  end
+
   def mkdir(directory)
     directory = image_file(directory)
     sudo "mkdir -p #{directory}" unless File.exists?(directory)
