@@ -1,11 +1,9 @@
-* add ntp to ntpdate
 * verify dhclient creates resolv.conf without problem
 * use utc time for record filenames
 * use a dedicated user (pige ?) for daemons and scripts
 * encode files (rake + sox ?)
 * delete old encoded files
 * provide a storage init script (fdisk, mke2fs, mount, ...)
-* create needed log files, directories (nginx/, dmesg, ...)
 * add ifplugd
 * create compact_flash distribution 
    standard disk image like gepetto sandbox one ?

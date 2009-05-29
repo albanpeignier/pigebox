@@ -32,7 +32,7 @@ class ImageBuilder < Rake::TaskLib
 
     @additional_packages =
       %w{cron} + # base system
-      %w{rsyslog netbase ifupdown net-tools dhcp3-client} + # base network
+      %w{rsyslog netbase ifupdown net-tools dhcp3-client ifplugd} + # base network
       %w{ssh ntp ntpdate avahi-autoipd avahi-daemon} + # network services
       %w{alsa-utils} + # base sound
       %w{ruby rubygems} # live origin :)
