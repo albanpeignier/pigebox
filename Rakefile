@@ -201,6 +201,9 @@ class ImageBuilder < Rake::TaskLib
       mkdir "/var/etc"
       install "/var/etc", "/etc/resolv.conf"
       link "/var/etc/resolv.conf", "/etc/resolv.conf"
+
+      # Use same timezone than build machine
+      install "/etc/", "/etc/timezone", "/etc/localtime"
     end
 
     configure :fstab do
