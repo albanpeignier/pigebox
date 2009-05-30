@@ -34,7 +34,7 @@ class ImageBuilder < Rake::TaskLib
       %w{cron rsyslog} + # base system
       %w{netbase ifupdown net-tools dhcp3-client ifplugd} + # base network
       %w{ssh ntp ntpdate avahi-autoipd avahi-daemon} + # network services
-      %w{alsa-utils} + # base sound
+      %w{alsa-utils sox libsox-fmt-all} + # base sound
       %w{ruby rubygems} # live origin :)
 
     yield self if block_given?

@@ -1,13 +1,19 @@
 require 'rake/tasklib'
 require 'find'
+require 'tempfile'
 
 require 'rubygems'
 require 'syslog_logger'
 
 module PigeCron
-  @logger = SyslogLogger.new('pige-cron').tap do |logger|
-    logger.level = Logger::INFO
-  end
+  @logger = 
+    unless ENV['DEBUG']
+      SyslogLogger.new('pige-cron').tap do |logger|
+        logger.level = Logger::INFO
+      end
+    else
+      Logger.new(STDOUT)
+    end
 
   def self.logger
     @logger
@@ -82,14 +88,71 @@ class Cleaner
 
 end
 
+class DirectoryEncoder
+
+  attr_accessor :directory
+
+  def initialize(directory)
+    @directory = directory
+  end
+
+  def with_lock
+    lock_file = "/tmp/pige:encode.lock"
+    unless File.exists?(lock_file)
+      touch lock_file
+
+      begin
+        yield
+      ensure
+        rm lock_file
+      end
+    else
+      PigeCron.logger.info "skip encode (lock file found)"
+    end
+  end
+      
+  def encode
+    with_lock do 
+      now = Time.now
+      
+      FileList["#{directory}/**/*.wav"].each do |wav_file|
+        next if File.mtime(wav_file) > now - 30
+        
+        ogg_file = wav_file.gsub(/\.wav$/,".ogg")
+        unless uptodate?(ogg_file, wav_file) 
+          encode_file(wav_file, ogg_file)
+        end
+      end
+    end
+  end
+
+  def encode_file(wav_file, ogg_file)
+    PigeCron.logger.info "encode #{wav_file}"
+    # Use temporary file to avoid problem with interrupted encoding
+    Tempfile.open('pige:encode') do |tempfile|
+      encoding_command = "sox #{wav_file} -C 6 -t ogg #{tempfile.path} && mv #{tempfile.path} #{ogg_file}"
+      PigeCron.logger.debug { "run '#{encoding_command}'" }
+
+      sox_output = `#{encoding_command} 2>&1`
+      PigeCron.logger.info "encoding failed: #{sox_output}" unless sox_output.empty?
+      tempfile.unlink
+    end
+  end
+
+end
+
 namespace :pige do
 
-  task :encode do
+  def pige_directory
+    ENV['PIGE_DIR'] || '/srv/pige'
+  end
 
+  task :encode do
+    DirectoryEncoder.new(pige_directory).encode
   end
 
   task :clean do
-    Cleaner.new('/srv/pige').clean(false)
+    Cleaner.new(pige_directory).clean(false)
   end
 
 end
