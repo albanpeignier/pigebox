@@ -3,5 +3,4 @@
 #
 
 MAILTO=root
-*/15 * * * *     root   /usr/share/pige/bin/pige-cron clean
-*/15 * * * *     root   /usr/share/pige/bin/pige-cron encode
+1,16,31,46 * * * *     root   /usr/share/pige/bin/pige-cron

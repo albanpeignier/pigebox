@@ -41,7 +41,7 @@ class Cleaner
     @directory = directory
   end
 
-  def clean(dry_run = true)
+  def clean
     unless File.exists?(@directory)
       PigeCron.logger.warn "Can't find the directory to clean: #{directory}"
       return
@@ -50,12 +50,23 @@ class Cleaner
     PigeCron.logger.info "free space: #{free_space.in_gigabytes} gigabytes"
     PigeCron.logger.debug { "minimum free space: #{minimum_free_space.in_gigabytes}" }
 
+    first_try = true
     while free_space < minimum_free_space
-      older_files('*.wav', 4).each do |file|
-        PigeCron.logger.info "delete #{file}"
-        File.delete(file) unless dry_run
-      end
+      delete older_files('*.wav', 4)
+      delete older_file('*.ogg') unless first_try
+      first_try = false
     end
+  end
+
+  def delete(*files)
+    files.flatten.each do |file|
+      PigeCron.logger.info "delete #{file}"
+      File.delete(file)
+    end
+  end
+
+  def older_file(name_pattern)
+    older_files name_pattern, 1
   end
 
   def older_files(name_pattern, count = 10)
@@ -130,12 +141,17 @@ class DirectoryEncoder
     PigeCron.logger.info "encode #{wav_file}"
     # Use temporary file to avoid problem with interrupted encoding
     Tempfile.open('pige:encode') do |tempfile|
-      encoding_command = "sox #{wav_file} -C 6 -t ogg #{tempfile.path} && mv #{tempfile.path} #{ogg_file}"
+      encoding_command = "sox #{wav_file} -t ogg -C 6 #{tempfile.path} && mv #{tempfile.path} #{ogg_file}"
       PigeCron.logger.debug { "run '#{encoding_command}'" }
 
       sox_output = `#{encoding_command} 2>&1`
-      PigeCron.logger.info "encoding failed: #{sox_output}" unless sox_output.empty?
       tempfile.unlink
+
+      if File.exists? ogg_file
+        File.chmod 0644, ogg_file
+      else
+        PigeCron.logger.info "encoding failed: #{sox_output}" unless sox_output.empty?
+      end
     end
   end
 
@@ -152,7 +168,9 @@ namespace :pige do
   end
 
   task :clean do
-    Cleaner.new(pige_directory).clean(false)
+    Cleaner.new(pige_directory).clean
   end
+
+  task :cron => [ :clean, :encode ]
 
 end
