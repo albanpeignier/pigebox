@@ -155,6 +155,8 @@ class ImageBuilder < Rake::TaskLib
 
         task :clean do
           chroot do |chroot|
+            chroot.sudo "apt-get remove --yes ruby-dev build-essential"
+            chroot.sudo "apt-get autoremove --yes"
             chroot.sudo "apt-get clean"
           end
         end
