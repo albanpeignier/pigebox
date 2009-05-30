@@ -31,8 +31,8 @@ class ImageBuilder < Rake::TaskLib
     @cache_dir= work_dir
 
     @additional_packages =
-      %w{cron} + # base system
-      %w{rsyslog netbase ifupdown net-tools dhcp3-client ifplugd} + # base network
+      %w{cron rsyslog} + # base system
+      %w{netbase ifupdown net-tools dhcp3-client ifplugd} + # base network
       %w{ssh ntp ntpdate avahi-autoipd avahi-daemon} + # network services
       %w{alsa-utils} + # base sound
       %w{ruby rubygems} # live origin :)
@@ -191,6 +191,8 @@ class ImageBuilder < Rake::TaskLib
         mkdir "root/.ssh"
         install "root/.ssh/authorized_keys", ssh_pubkey
       end
+
+      install "etc/dhcp3", "dhcp3/dhclient.conf", "dhcp3/dhclient-script"
     end
 
     configure :resolv_conf do

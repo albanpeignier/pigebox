@@ -1,4 +1,3 @@
-* verify dhclient creates resolv.conf without problem
 * use utc time for record filenames
 * use a dedicated user (pige ?) for daemons and scripts
 * encode files (rake + sox ?)
