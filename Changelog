@@ -1,3 +1,8 @@
+pigebox - 0.0.3
+
+  * use utc time for filenames
+  * fix resolv.conf update by dhcp
+
 pigebox - 0.0.2 - 27 May 2009
 
   * add ntpdate and ntp
