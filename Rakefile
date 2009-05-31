@@ -245,6 +245,9 @@ class ImageBuilder < Rake::TaskLib
         chroot.sudo "ln -fs /usr/lib/libasound.so.2.0.0 /usr/lib/libasound.so"
         chroot.sudo "ln -fs /usr/lib/libsndfile.so.1.0.17 /usr/lib/libsndfile.so"
         chroot.sudo "update-rc.d alsa.backup defaults"
+
+        chroot.sudo "adduser --system --no-create-home --disabled-password --disabled-login pige"
+        chroot.sudo "adduser pige audio"
       end
     end
 

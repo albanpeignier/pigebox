@@ -32,7 +32,7 @@ The record files are available via :
 * 15 minutes recording files
 * automatic cleaning of older files
 
-The storage filesystem must have the label 'pige'. 
+The storage filesystem must have the label +pige+ and be writable for user +pige+. 
 For example, to create your storage filesystem :
 
   $ ssh root@pigebox.local
@@ -41,6 +41,7 @@ For example, to create your storage filesystem :
   ...
   # mke2fs -L pige -j /dev/sda1
   # mount /srv/pige
+  # chown pige:audio /srv/pige
 
 The alsa.backup daemon will detect automatically the new mount.
 
