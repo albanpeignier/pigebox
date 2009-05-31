@@ -177,12 +177,9 @@ class ImageBuilder < Rake::TaskLib
       task :configure
       # Dependencies with configure helper below
 
+      desc "Fully rebuild the image"
       task :rebuild => [ :clean, :bootstrap, :configure, "dist:iso" ]
 
-    end
-
-    configure :kernel_img do
-      install "etc", "kernel-img.conf"
     end
 
     configure :network do
@@ -194,13 +191,12 @@ class ImageBuilder < Rake::TaskLib
         install "root/.ssh/authorized_keys", ssh_pubkey
       end
 
-      install "etc/dhcp3", "dhcp3/dhclient.conf", "dhcp3/dhclient-script"
-    end
-
-    configure :resolv_conf do
       mkdir "/var/etc"
       install "/var/etc", "/etc/resolv.conf"
       link "/var/etc/resolv.conf", "/etc/resolv.conf"
+
+      # dhclient-script is customized to modify /var/etc/resolv.conf
+      install "etc/dhcp3", "dhcp3/dhclient.conf", "dhcp3/dhclient-script"
 
       # Use same timezone than build machine
       install "/etc/", "/etc/timezone", "/etc/localtime"
@@ -210,23 +206,24 @@ class ImageBuilder < Rake::TaskLib
       mkdir "/srv/pige"
       install "etc", "fstab"
       link "/proc/mounts", "/etc/mtab"
-      
+
+      # to create subdirectories lost by reboot
       install "etc/init.d/preparetmpfs", "init.d/preparetmpfs"
       chroot do |chroot|
         chroot.sudo "update-rc.d preparetmpfs defaults 15"
       end
     end
 
-    configure :packages do
+    configure :kernel do
+      install "etc", "kernel-img.conf"
+
       packages = %w{linux-image-2.6-686 grub}
       chroot do |chroot|
         chroot.sudo "apt-get update"
         chroot.apt_install packages
         chroot.sudo "apt-get clean"
       end
-    end
 
-    configure :grub do
       mkdir "boot/grub"
       install "boot/grub", "grub/menu.lst", image_file('/usr/lib/grub/i386-pc/stage2_eltorito')
     end
