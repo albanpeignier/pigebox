@@ -33,12 +33,80 @@ class Numeric
 
 end
 
+class FileGroup
+
+  attr_reader :name_pattern, :total_size
+
+  def initialize(name_pattern)
+    @name_pattern = name_pattern
+    @empty_files = []
+
+    @older_files = []
+    @older_count = 20
+
+    @total_size = 0
+  end
+
+  def add(file)
+    return unless File.file?(file) and File.fnmatch?(name_pattern, File.basename(file))
+
+    unless empty_file?(file)
+      if @older_files.size < @older_count or File.mtime(@older_files.last) > File.mtime(file)
+        @older_files = (@older_files + [file]).sort_by { |f| File.mtime(f) }.first(@older_count)
+      end
+
+      @total_size += File.size(file)
+    else
+      @empty_files << file
+    end
+  end
+  
+  def empty_file?(file)
+    File.size(file) <= 44
+  end
+
+  def reduce(target_total_size)
+    @empty_files.each do |file|
+      delete(file)
+    end
+
+    until @older_files.empty? or @total_size < target_total_size
+      file = @older_files.shift
+      @total_size -= File.size(file)
+      delete(file)
+    end
+  end
+
+  def delete(file)
+    PigeCron.logger.info "delete #{file}"
+    File.delete(file)
+  end
+
+end
+
 class Cleaner
 
   attr_accessor :directory
 
   def initialize(directory)
     @directory = directory
+
+    @wav_group = FileGroup.new('*.wav')
+    @ogg_group = FileGroup.new('*.ogg')
+  end
+
+  def index
+    unless File.exists?(@directory)
+      PigeCron.logger.warn "Can't find the directory to clean: #{directory}"
+      return
+    end
+
+    Find.find(directory) do |file|
+      @wav_group.add file
+      @ogg_group.add file
+    end
+
+    self
   end
 
   def clean
@@ -47,40 +115,15 @@ class Cleaner
       return
     end
       
-    PigeCron.logger.info "free space: #{free_space.in_gigabytes} gigabytes"
+    PigeCron.logger.info "free space before: #{free_space.in_gigabytes} gigabytes"
     PigeCron.logger.debug { "minimum free space: #{minimum_free_space.in_gigabytes}" }
 
-    first_try = true
-    while free_space < minimum_free_space
-      delete older_files('*.wav', 4)
-      delete older_file('*.ogg') unless first_try
-      first_try = false
+    if free_space < minimum_free_space
+      @wav_group.reduce(maximum_used_space * 0.1)
+      @ogg_group.reduce(maximum_used_space * 0.9)
+
+      PigeCron.logger.info "free space after: #{free_space.in_gigabytes} gigabytes (wav: #{@wav_group.total_size.in_gigabytes}, ogg: #{@ogg_group.total_size.in_gigabytes})"
     end
-  end
-
-  def delete(*files)
-    files.flatten.each do |file|
-      PigeCron.logger.info "delete #{file}"
-      File.delete(file)
-    end
-  end
-
-  def older_file(name_pattern)
-    older_files name_pattern, 1
-  end
-
-  def older_files(name_pattern, count = 10)
-    older_files = []
-
-    Find.find(directory) do |file|
-      next unless File.file?(file) and File.fnmatch?(name_pattern, File.basename(file))
-      
-      if older_files.size < count or File.mtime(older_files.last) > File.mtime(file)
-        older_files = (older_files + [file]).sort_by { |f| File.mtime(f) }.first(count)
-      end
-    end
-
-    older_files
   end
 
   def free_space
@@ -91,6 +134,10 @@ class Cleaner
   def total_space
     total_block, block_size = `stat --file-system --printf="%b %S" #{directory}`.split.collect(&:to_i)
     total_block*block_size
+  end
+
+  def maximum_used_space
+    @maximum_used_space ||= total_space - minimum_free_space
   end
 
   def minimum_free_space
@@ -168,7 +215,7 @@ namespace :pige do
   end
 
   task :clean do
-    Cleaner.new(pige_directory).clean
+    Cleaner.new(pige_directory).index.clean
   end
 
   task :cron => [ :clean, :encode ]
