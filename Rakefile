@@ -10,7 +10,7 @@ require 'rake/tasklib'
 class ImageBuilder < Rake::TaskLib
   include ShellUtils
 
-  @@default_debian_mirror= "http://fr.ftp.debian.org/debian"
+  @@default_debian_mirror= "http://ftp.fr.debian.org/debian"
   @@ssh_pubkey = Dir["#{ENV['HOME']}/.ssh/id_*pub"].first
 
   def self.default_debian_mirror=(default_debian_mirror)
