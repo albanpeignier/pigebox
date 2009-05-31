@@ -6,7 +6,8 @@ tmpfs        /var/tmp       tmpfs   defaults,noatime  0   0
 tmpfs        /var/etc       tmpfs   defaults,noatime  0   0
 tmpfs        /var/lib/dhcp3	tmpfs   defaults,noatime  0   0
 tmpfs        /var/lib/nginx	tmpfs   defaults,noatime  0   0
+tmpfs        /var/lib/ntp   tmpfs   defaults,noatime  0   0
 tmpfs        /var/lib/munin	tmpfs   defaults,noatime  0   0
 tmpfs        /var/www/munin	tmpfs   defaults,noatime  0   0
 
-LABEL=pige   /srv/pige	    ext3    defaults,noatime  0   0
+LABEL=pige   /srv/pige	    ext3    defaults          0   0
