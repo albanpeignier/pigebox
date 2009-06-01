@@ -70,11 +70,16 @@ class FileGroup
       delete(file)
     end
 
-    until @older_files.empty? or @total_size < target_total_size
+    PigeCron.logger.info "try to reduce '#{name_pattern}' from #{@total_size.in_gigabytes} gigabytes to #{target_total_size.in_gigabytes}"
+
+    has_deleted_files = false
+    while @total_size > target_total_size and not @older_files.empty?
       file = @older_files.shift
       @total_size -= File.size(file)
+      has_deleted_files = true
       delete(file)
     end
+    has_deleted_files
   end
 
   def delete(file)
@@ -115,12 +120,15 @@ class Cleaner
       return
     end
       
-    PigeCron.logger.info "free space before: #{free_space.in_gigabytes} gigabytes"
+    PigeCron.logger.info "free space: #{free_space.in_gigabytes} gigabytes"
     PigeCron.logger.debug { "minimum free space: #{minimum_free_space.in_gigabytes}" }
 
     if free_space < minimum_free_space
-      @wav_group.reduce(maximum_used_space * 0.1)
-      @ogg_group.reduce(maximum_used_space * 0.9)
+      if @ogg_group.reduce(maximum_used_space * 0.9)
+        @wav_group.reduce(maximum_used_space * 0.1)
+      else
+        @wav_group.reduce(maximum_used_space - @ogg_group.total_size)
+      end
 
       PigeCron.logger.info "free space after: #{free_space.in_gigabytes} gigabytes (wav: #{@wav_group.total_size.in_gigabytes}, ogg: #{@ogg_group.total_size.in_gigabytes})"
     end
