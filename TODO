@@ -1,5 +1,10 @@
-* use a dedicated user (pige ?) for daemons and scripts
 * provide a storage init script (fdisk, mke2fs, mount, ...)
+* save signal level (max/min/rms) in a dedicated file
+* draw signal level images with pige-cron
+* use 'exact time' filename ('14h34m23') when file already exists
+   make easier time range retrieval
+* display ogg/wav disk usages in munin
+* display max/min/rms in munin
 * create compact_flash distribution 
    standard disk image like gepetto sandbox one ?
    http://github.com/albanpeignier/gepetto/blob/master/tasks/sandbox.rake
