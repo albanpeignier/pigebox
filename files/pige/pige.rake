@@ -123,7 +123,9 @@ class Cleaner
     PigeCron.logger.info "free space: #{free_space.in_gigabytes} gigabytes"
     PigeCron.logger.debug { "minimum free space: #{minimum_free_space.in_gigabytes}" }
 
-    if free_space < minimum_free_space
+    if (missing_free_space = minimum_free_space - free_space) > 0
+      maximum_used_space = (@ogg_group.total_size + @wav_group.total_size) - missing_free_space
+      
       if @ogg_group.reduce(maximum_used_space * 0.9)
         @wav_group.reduce(maximum_used_space * 0.1)
       else
@@ -140,12 +142,11 @@ class Cleaner
   end
 
   def total_space
-    total_block, block_size = `stat --file-system --printf="%b %S" #{directory}`.split.collect(&:to_i)
-    total_block*block_size
-  end
-
-  def maximum_used_space
-    @maximum_used_space ||= total_space - minimum_free_space
+    unless @total_space
+      total_block, block_size = `stat --file-system --printf="%b %S" #{directory}`.split.collect(&:to_i)
+      @total_space = total_block*block_size
+    end
+    @total_space
   end
 
   def minimum_free_space
