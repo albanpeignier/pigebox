@@ -1,4 +1,7 @@
 * provide a storage init script (fdisk, mke2fs, mount, ...)
+* install logrotate
+* use a debian package for alsa.backup
+* create a debian package for pige utils
 * save signal level (max/min/rms) in a dedicated file
 * draw signal level images with pige-cron
 * use 'exact time' filename ('14h34m23') when file already exists

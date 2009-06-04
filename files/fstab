@@ -1,3 +1,5 @@
+LABEL=pigebox_root          /       ext3    defaults,ro          0   0
+
 tmpfs        /tmp           tmpfs   defaults,noatime  0   0
 tmpfs        /var/run       tmpfs   defaults,noatime  0   0
 tmpfs        /var/log       tmpfs   defaults,noatime  0   0
