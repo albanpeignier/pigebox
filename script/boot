@@ -1,2 +1,2 @@
 #!/bin/sh
-exec qemu -drive file=/var/tmp/pigebox/pigebox.iso,if=ide,index=0,media=cdrom -net nic,vlan=0 -net tap,vlan=0,ifname=tap0
+exec qemu -soundhw es1370 -hdb /ntspace/fs.ext3 -drive file=/var/tmp/pigebox/pigebox.iso,if=ide,index=0,media=cdrom -net nic,vlan=0 -net tap,vlan=0,ifname=tap0
