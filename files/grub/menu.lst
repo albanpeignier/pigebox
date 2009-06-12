@@ -1,14 +1,14 @@
 default		0
-timeout		5
+timeout		2
 fallback	1
 
 color cyan/blue white/blue
 
-title		Debian GNU/Linux, kernel 2.6.26-2-686
-kernel		/boot/vmlinuz-2.6.26-2-686 root=/dev/hda ro 
-initrd		/boot/initrd.img-2.6.26-2-686
+title		PigeBox <%= version %> Debian GNU/Linux
+kernel		/vmlinuz root=<%= root %> ro 
+initrd		/initrd.img
 
-title		Debian GNU/Linux, kernel 2.6.26-2-686 (single-user mode)
-kernel		/boot/vmlinuz-2.6.26-2-686 root=/dev/hda ro single
-initrd		/boot/initrd.img-2.6.26-2-686
+title		PigeBox <%= version %> Debian GNU/Linux (single-user mode)
+kernel		/vmlinuz root=<%= root %> ro single
+initrd		/initrd.img
 

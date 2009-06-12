@@ -4,8 +4,27 @@ module ShellUtils
   end
 end
 
+class Numeric
+
+  def megabytes
+    self * 1024 * 1024
+  end
+  alias_method :megabyte, :megabytes
+
+  def in_megabytes
+    self.to_f / 1.megabyte
+  end
+
+end
+
+module Pigebox
+  VERSION = "0.0.4"
+end
+
 include ShellUtils
 require 'rake/tasklib'
+require 'erb'
+require 'tempfile'
 
 class ImageBuilder < Rake::TaskLib
   include ShellUtils
@@ -57,8 +76,12 @@ class ImageBuilder < Rake::TaskLib
     File.join(image_dir, name)
   end
 
+  def image_files(*globs)
+    Dir[*globs.flatten.collect { |g| image_file(g) }]
+  end
+
   def install(target, *sources)
-    file_sources = sources.collect { |s| s.start_with?('/') ? s : File.join("files", s) }
+    file_sources = sources.flatten.collect { |s| s.start_with?('/') ? s : File.join("files", s) }
     sudo "cp --preserve=mode,timestamps #{file_sources.join(' ')} #{image_file(target)}"
   end
 
@@ -122,6 +145,41 @@ class ImageBuilder < Rake::TaskLib
     "#{cache_dir}/#{name}.iso"
   end
 
+  def disk_file
+    "#{cache_dir}/#{name}.disk"
+  end
+
+  def disk_size
+    400.megabytes
+  end
+
+  def mount_dir
+    "#{cache_dir}/mount"
+  end
+
+  def install_grub(options = {})
+    mkdir "boot/grub"
+
+    stage_files = Array(options[:stage_files]).flatten
+
+    install_grub_menu options
+    install "boot/grub", stage_files.collect { |f| '/usr/lib/grub/**/' + f }
+  end
+
+  def install_grub_menu(options = {})
+    options = { :root => "/dev/hda1" }.update(options)
+
+    root = options[:root]
+    version = Pigebox::VERSION
+
+    Tempfile.open("menu_lst") do |f|
+      f.write ERB.new(IO.read("files/grub/menu.lst")).result(binding)
+      f.close
+      File.chmod 0644, f.path
+      install "boot/grub/menu.lst", f.path
+    end
+  end
+
   def define
     namespace name do
       desc "Clean image temporary directory"
@@ -163,6 +221,7 @@ class ImageBuilder < Rake::TaskLib
 
         desc "Create an iso file from pigebox image"
         task :iso => :clean do
+          install_grub :root => "/dev/hda", :stage_files => "stage2_eltorito"
           sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o #{iso_file} #{image_dir}"
         end
 
@@ -171,18 +230,73 @@ class ImageBuilder < Rake::TaskLib
           sh "bzip2 -c #{iso_file} > #{iso_file}.bz"
         end
 
+        namespace :disk do
+
+          task :clean do
+            rm disk_file
+          end
+
+          task :file do
+            sh "dd if=/dev/zero of=#{disk_file} count=#{disk_size.in_megabytes.to_i} bs=1M"
+            sh "echo '63,' | /sbin/sfdisk --no-reread -uS -H16 -S63 #{disk_file}"
+          end
+          
+          def fs_offset
+            32256
+          end
+            
+          task :fs do
+            begin
+              sudo "losetup -o #{fs_offset} /dev/loop0 #{disk_file}"
+
+              linux_partition_info = `/sbin/sfdisk -l #{disk_file}`.scan(%r{#{disk_file}.*Linux}).first
+              fs_block_size = linux_partition_info.split[4].to_i
+            
+              sudo "/sbin/mke2fs -L pigebox_root -jqF /dev/loop0 #{fs_block_size}"
+            ensure
+              sudo "losetup -d /dev/loop0"
+            end
+          end
+
+          task :grub_files do
+            install_grub :stage_files => %w{e2fs_stage1_5 stage?}
+          end
+
+          task :copy => "dist:clean" do
+            mkdir_p mount_dir
+            begin
+              sudo "mount -o loop,offset=#{fs_offset} #{disk_file} #{mount_dir}"
+              sudo "rsync -av #{image_dir}/ #{mount_dir}"
+              sh "df -h #{mount_dir}"
+            ensure
+              sudo "umount #{mount_dir}"
+            end
+          end
+
+
+          task :grub do
+            IO.popen("sudo grub --device-map=/dev/null","w") { |grub| 
+              grub.puts "device (hd0) #{disk_file}"
+              grub.puts "root (hd0,0)"
+              grub.puts "setup (hd0)"
+              grub.puts "quit"
+            }
+          end
+
+        end
+
+        desc "Create a disk image"
+        task :disk => %w{file fs grub_files copy grub}.collect { |t| "disk:#{t}" }
+
       end
 
       desc "Configure the pigebox image"
       task :configure
       # Dependencies with configure helper below
 
+      desc "Fully rebuild the image"
       task :rebuild => [ :clean, :bootstrap, :configure, "dist:iso" ]
 
-    end
-
-    configure :kernel_img do
-      install "etc", "kernel-img.conf"
     end
 
     configure :network do
@@ -194,13 +308,12 @@ class ImageBuilder < Rake::TaskLib
         install "root/.ssh/authorized_keys", ssh_pubkey
       end
 
-      install "etc/dhcp3", "dhcp3/dhclient.conf", "dhcp3/dhclient-script"
-    end
-
-    configure :resolv_conf do
       mkdir "/var/etc"
       install "/var/etc", "/etc/resolv.conf"
       link "/var/etc/resolv.conf", "/etc/resolv.conf"
+
+      # dhclient-script is customized to modify /var/etc/resolv.conf
+      install "etc/dhcp3", "dhcp3/dhclient.conf", "dhcp3/dhclient-script"
 
       # Use same timezone than build machine
       install "/etc/", "/etc/timezone", "/etc/localtime"
@@ -210,25 +323,23 @@ class ImageBuilder < Rake::TaskLib
       mkdir "/srv/pige"
       install "etc", "fstab"
       link "/proc/mounts", "/etc/mtab"
-      
+
+      # to create subdirectories lost by reboot
       install "etc/init.d/preparetmpfs", "init.d/preparetmpfs"
       chroot do |chroot|
         chroot.sudo "update-rc.d preparetmpfs defaults 15"
       end
     end
 
-    configure :packages do
+    configure :kernel do
+      install "etc", "kernel-img.conf"
+
       packages = %w{linux-image-2.6-686 grub}
       chroot do |chroot|
-        chroot.sudo "apt-get update"
+        #chroot.sudo "apt-get update"
         chroot.apt_install packages
         chroot.sudo "apt-get clean"
       end
-    end
-
-    configure :grub do
-      mkdir "boot/grub"
-      install "boot/grub", "grub/menu.lst", image_file('/usr/lib/grub/i386-pc/stage2_eltorito')
     end
 
     configure :alsa_backup do
@@ -248,6 +359,9 @@ class ImageBuilder < Rake::TaskLib
         chroot.sudo "ln -fs /usr/lib/libasound.so.2.0.0 /usr/lib/libasound.so"
         chroot.sudo "ln -fs /usr/lib/libsndfile.so.1.0.17 /usr/lib/libsndfile.so"
         chroot.sudo "update-rc.d alsa.backup defaults"
+
+        chroot.sudo "adduser --system --no-create-home --disabled-password --disabled-login pige"
+        chroot.sudo "adduser pige audio"
       end
     end
 

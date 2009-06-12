@@ -1,2 +1,17 @@
-#!/bin/sh
-exec qemu -soundhw es1370 -hdb /ntspace/fs.ext3 -drive file=/var/tmp/pigebox/pigebox.iso,if=ide,index=0,media=cdrom -net nic,vlan=0 -net tap,vlan=0,ifname=tap0
+boot_media=${1:-cdrom}
+
+case $boot_media in
+cdrom)
+  boot_disk_file=/var/tmp/pigebox/pigebox.iso
+  ;;
+disk)
+  boot_disk_file=/var/tmp/pigebox/pigebox.disk
+  ;;
+*)
+  echo "Unsupported boot media: '${boot_mode}'"  
+  exit 1
+esac
+
+boot_disk="-drive file=${boot_disk_file},if=ide,index=0,media=${boot_media}"
+
+exec qemu ${boot_disk} -soundhw es1370 -net nic,vlan=0 -net tap,vlan=0,ifname=tap0

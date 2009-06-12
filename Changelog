@@ -1,7 +1,12 @@
+pigebox - 0.0.4
+
+  * add disk image distribution
+
 pigebox - 0.0.3
 
   * use utc time for filenames
   * fix resolv.conf update by dhcp
+  * fix cleaner by using disk usage ratio (90% ogg, 10% wav)
 
 pigebox - 0.0.2 - 27 May 2009
 

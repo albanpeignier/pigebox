@@ -10,6 +10,7 @@
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/bin/alsa.backup
 DAEMON_OPTS=""
+DAEMON_USER=""
 NAME=alsa.backup
 DESC="alsa backup"
 
@@ -19,17 +20,9 @@ test -x $DAEMON || exit 0
 
 . /lib/lsb/init-functions
 
-is_true() {
-    if [ "x$1" = "xtrue" -o "x$1" = "xyes" -o "x$1" = "x0" ] ; then
-        return 0
-    else
-        return 1
-    fi
-}
-
 start_alsa_backup() {
-    if is_true "$START" ; then
-	      start-stop-daemon --start --quiet --pidfile /var/run/$NAME.pid \
+    if [ -n "$DAEMON_USER" ] ; then
+	      start-stop-daemon --start --quiet --pidfile /var/run/$NAME.pid --chuid $DAEMON_USER \
 	          --startas $DAEMON -- $DAEMON_OPTS --config=$CONFIG_FILE --background --pid=/var/run/$NAME.pid
     else
 	      echo ""

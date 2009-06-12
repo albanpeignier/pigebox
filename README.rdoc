@@ -32,7 +32,7 @@ The record files are available via :
 * 15 minutes recording files
 * automatic cleaning of older files
 
-The storage filesystem must have the label 'pige'. 
+The storage filesystem must have the label +pige+ and be writable for user +pige+. 
 For example, to create your storage filesystem :
 
   $ ssh root@pigebox.local
@@ -41,6 +41,7 @@ For example, to create your storage filesystem :
   ...
   # mke2fs -L pige -j /dev/sda1
   # mount /srv/pige
+  # chown pige:audio /srv/pige
 
 The alsa.backup daemon will detect automatically the new mount.
 
@@ -65,6 +66,7 @@ For the moment, it requires an ssh session :
 == Distribution
 
 * iso image
+* disk image
 
 == Build
 
@@ -78,6 +80,14 @@ The image can be backup and restored to save bootstrap time :
   # Then as many times as you need :
   rake pigebox:restore pigebox:configure pigebox:dist:iso
 
+To build an iso image :
+
+  rake pigebox:dist:iso
+
+To build an disk image :
+
+  rake pigebox:dist:disk
+
 You can configure the build with using a +config+ file :
 
   ImageBuilder.default_debian_mirror = "http://localhost:9999/debian"
@@ -90,6 +100,7 @@ See +rake -T+ for tasks details :
   rake pigebox:clean      # Clean image temporary directory
   rake pigebox:configure  # Configure the pigebox image
   rake pigebox:dist:iso   # Create an iso file from pigebox image
+  rake pigebox:dist:disk  # Create a disk image
   rake pigebox:restore    # Restore the image directory with existing tar archive
   rake setup              # Install some of required tools to create pigebox image
 
@@ -114,5 +125,6 @@ Create a tap0 network interface:
 
 Start qemu vm:
 
-  ./script/boot
+  ./script/boot cdrom  # to use iso distribution
+  ./script/boot disk   # to use disk distribution
 
