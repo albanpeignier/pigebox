@@ -54,6 +54,8 @@ class ImageBuilder < Rake::TaskLib
       %w{netbase ifupdown net-tools dhcp3-client ifplugd} + # base network
       %w{ssh ntp ntpdate avahi-autoipd avahi-daemon} + # network services
       %w{alsa-utils sox libsox-fmt-all} + # base sound
+      %w{mdadm} + # manage SW RAID storage
+      %w{nano} + # so handy for config files...
       %w{ruby rubygems} # live origin :)
 
     yield self if block_given?
