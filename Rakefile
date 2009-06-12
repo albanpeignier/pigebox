@@ -169,7 +169,7 @@ class ImageBuilder < Rake::TaskLib
   end
 
   def install_grub_menu(options = {})
-    options = { :root => "/dev/hda1" }.update(options)
+    options = { :root => "LABEL=base" }.update(options)
 
     root = options[:root]
     version = Pigebox::VERSION
@@ -224,7 +224,7 @@ class ImageBuilder < Rake::TaskLib
         desc "Create an iso file from pigebox image"
         task :iso => :clean do
           install_grub :root => "/dev/hda", :stage_files => "stage2_eltorito"
-          sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o #{iso_file} #{image_dir}"
+          sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -A 'base' -V 'base' -o #{iso_file} #{image_dir}"
         end
 
         desc "Create a compressed iso file"
