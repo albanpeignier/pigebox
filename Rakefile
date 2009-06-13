@@ -56,7 +56,7 @@ class ImageBuilder < Rake::TaskLib
       %w{alsa-utils sox libsox-fmt-all} + # base sound
       %w{mdadm} + # manage SW RAID storage
       %w{nano} + # so handy for config files...
-      %w{ruby rubygems} # live origin :)
+      %w{ruby} # live origin :)
 
     yield self if block_given?
     define
@@ -169,7 +169,8 @@ class ImageBuilder < Rake::TaskLib
   end
 
   def install_grub_menu(options = {})
-    root = "LABEL=#{root_label}"
+    options = { :root => "LABEL=#{root_label}" }.update(options)
+    root = options[:root]
     version = Pigebox::VERSION
 
     Tempfile.open("menu_lst") do |f|
@@ -344,14 +345,20 @@ class ImageBuilder < Rake::TaskLib
       end
     end
 
+    configure :packages do
+      install "etc/apt/sources.list.d", "apt/tryphon.list"
+
+      chroot do |chroot|
+        chroot.sudo "apt-get update"
+      end
+    end
+
     configure :kernel do
       install "etc", "kernel-img.conf"
 
       packages = %w{linux-image-2.6-686 grub}
       chroot do |chroot|
-        #chroot.sudo "apt-get update"
         chroot.apt_install packages
-        chroot.sudo "apt-get clean"
       end
     end
 
@@ -363,7 +370,8 @@ class ImageBuilder < Rake::TaskLib
 
       # TODO use a debian package
       chroot do |chroot|
-        chroot.apt_install %w{ruby-dev build-essential rake libasound2 libsndfile1 libdaemons-ruby1.8 libffi-dev}
+        chroot.apt_install %w{rubygems ruby-dev build-essential rake libasound2 libsndfile1 libdaemons-ruby1.8 libffi-dev}
+        chroot.sudo "ln -fs /usr/bin/rake1.8 /usr/bin/rake"
         
         chroot.gem_install %w{ffi bones newgem cucumber SyslogLogger daemons}
         chroot.gem_install "albanpeignier-alsa-backup", :source => "http://gems.github.com"
