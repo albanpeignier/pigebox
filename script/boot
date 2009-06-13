@@ -1,5 +1,3 @@
-#!/bin/bash
-
 boot_media=${1:-cdrom}
 
 case $boot_media in
@@ -16,4 +14,4 @@ esac
 
 boot_disk="-drive file=${boot_disk_file},if=ide,index=0,media=${boot_media}"
 
-exec qemu ${boot_disk} -net nic,vlan=0 -net tap,vlan=0,ifname=tap0
+exec qemu ${boot_disk} -soundhw es1370 -net nic,vlan=0 -net tap,vlan=0,ifname=tap0
