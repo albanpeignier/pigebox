@@ -169,9 +169,7 @@ class ImageBuilder < Rake::TaskLib
   end
 
   def install_grub_menu(options = {})
-    options = { :root => "LABEL=base" }.update(options)
-
-    root = options[:root]
+    root = "LABEL=#{root_label}"
     version = Pigebox::VERSION
 
     Tempfile.open("menu_lst") do |f|
@@ -180,6 +178,10 @@ class ImageBuilder < Rake::TaskLib
       File.chmod 0644, f.path
       install "boot/grub/menu.lst", f.path
     end
+  end
+
+  def root_label
+    "pigebox_root"
   end
 
   def define
@@ -224,7 +226,7 @@ class ImageBuilder < Rake::TaskLib
         desc "Create an iso file from pigebox image"
         task :iso => :clean do
           install_grub :root => "/dev/hda", :stage_files => "stage2_eltorito"
-          sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -A 'base' -V 'base' -o #{iso_file} #{image_dir}"
+          sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -A 'Pibebox_#{Pigebox::VERSION}' -V '#{root_label}' -o #{iso_file} #{image_dir}"
         end
 
         desc "Create a compressed iso file"
@@ -254,7 +256,7 @@ class ImageBuilder < Rake::TaskLib
               linux_partition_info = `/sbin/sfdisk -l #{disk_file}`.scan(%r{#{disk_file}.*Linux}).first
               fs_block_size = linux_partition_info.split[4].to_i
             
-              sudo "/sbin/mke2fs -L pigebox_root -jqF /dev/loop0 #{fs_block_size}"
+              sudo "/sbin/mke2fs -L #{root_label} -jqF /dev/loop0 #{fs_block_size}"
             ensure
               sudo "losetup -d /dev/loop0"
             end
@@ -296,8 +298,17 @@ class ImageBuilder < Rake::TaskLib
       task :configure
       # Dependencies with configure helper below
 
-      desc "Fully rebuild the image"
-      task :rebuild => [ :clean, :bootstrap, :configure, "dist:iso" ]
+      task :rebuild => [ :clean, :bootstrap, :configure ]
+      
+      namespace :rebuild do
+
+        desc "Fully rebuild an iso image"
+        task :iso => [:rebuild, "dist:iso"]
+
+        desc "Fully rebuild a disk image"
+        task :disk => [:rebuild, "dist:disk"]
+
+      end
 
     end
 
