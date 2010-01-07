@@ -227,7 +227,7 @@ class ImageBuilder < Rake::TaskLib
         desc "Create an iso file from pigebox image"
         task :iso => :clean do
           install_grub :root => "/dev/hda", :stage_files => "stage2_eltorito"
-          sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -A 'Pibebox_#{Pigebox::VERSION}' -V '#{root_label}' -o #{iso_file} #{image_dir}"
+          sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -A 'base' -V 'base' -o #{iso_file} #{image_dir}"
         end
 
         desc "Create a compressed iso file"
@@ -370,10 +370,10 @@ class ImageBuilder < Rake::TaskLib
 
       # TODO use a debian package
       chroot do |chroot|
-        chroot.apt_install %w{rubygems ruby-dev build-essential rake libasound2 libsndfile1 libdaemons-ruby1.8 libffi-dev}
+        chroot.apt_install %w{rubygems ruby-dev build-essential rake libasound2 libsndfile1 libdaemons-ruby1.8 libffi-ruby}
         chroot.sudo "ln -fs /usr/bin/rake1.8 /usr/bin/rake"
         
-        chroot.gem_install %w{ffi bones newgem cucumber SyslogLogger daemons}
+        chroot.gem_install %w{SyslogLogger}
         chroot.gem_install "albanpeignier-alsa-backup", :source => "http://gems.github.com"
         
         chroot.sudo "ln -fs /var/lib/gems/1.8/bin/alsa.backup /usr/bin/alsa.backup"
