@@ -1,1 +1,2 @@
 deb http://debian.tryphon.org lenny-backports main contrib
+deb http://debian.tryphon.org lenny main contrib
