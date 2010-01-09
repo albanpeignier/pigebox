@@ -51,7 +51,7 @@ class ImageBuilder < Rake::TaskLib
 
     @additional_packages =
       %w{cron rsyslog} + # base system
-      %w{netbase ifupdown net-tools dhcp3-client ifplugd} + # base network
+      %w{netbase ifupdown net-tools dhcp3-client ifplugd curl} + # base network
       %w{ssh ntp ntpdate avahi-autoipd avahi-daemon} + # network services
       %w{alsa-utils sox libsox-fmt-all} + # base sound
       %w{mdadm} + # manage SW RAID storage
@@ -159,28 +159,6 @@ class ImageBuilder < Rake::TaskLib
     "#{cache_dir}/mount"
   end
 
-  def install_grub(options = {})
-    mkdir "boot/grub"
-
-    stage_files = Array(options[:stage_files]).flatten
-
-    install_grub_menu options
-    install "boot/grub", stage_files.collect { |f| '/usr/lib/grub/**/' + f }
-  end
-
-  def install_grub_menu(options = {})
-    options = { :root => "LABEL=#{root_label}" }.update(options)
-    root = options[:root]
-    version = Pigebox::VERSION
-
-    Tempfile.open("menu_lst") do |f|
-      f.write ERB.new(IO.read("files/grub/menu.lst")).result(binding)
-      f.close
-      File.chmod 0644, f.path
-      install "boot/grub/menu.lst", f.path
-    end
-  end
-
   def root_label
     "pigebox_root"
   end
@@ -226,8 +204,8 @@ class ImageBuilder < Rake::TaskLib
 
         desc "Create an iso file from pigebox image"
         task :iso => :clean do
-          install_grub :root => "/dev/hda", :stage_files => "stage2_eltorito"
-          sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -A 'base' -V 'base' -o #{iso_file} #{image_dir}"
+          raise "Disabled task, please upgrade with syslinux"
+          # sudo "mkisofs -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -A 'base' -V 'base' -o #{iso_file} #{image_dir}"
         end
 
         desc "Create a compressed iso file"
@@ -243,7 +221,7 @@ class ImageBuilder < Rake::TaskLib
 
           task :file do
             sh "dd if=/dev/zero of=#{disk_file} count=#{disk_size.in_megabytes.to_i} bs=1M"
-            sh "echo '63,' | /sbin/sfdisk --no-reread -uS -H16 -S63 #{disk_file}"
+            sh "echo '63,,L,*' | /sbin/sfdisk --no-reread -uS -H16 -S63 #{disk_file}"
           end
           
           def fs_offset
@@ -255,7 +233,7 @@ class ImageBuilder < Rake::TaskLib
               sudo "losetup -o #{fs_offset} /dev/loop0 #{disk_file}"
 
               linux_partition_info = `/sbin/sfdisk -l #{disk_file}`.scan(%r{#{disk_file}.*Linux}).first
-              fs_block_size = linux_partition_info.split[4].to_i
+              fs_block_size = linux_partition_info.split[5].to_i
             
               sudo "/sbin/mke2fs -L #{root_label} -jqF /dev/loop0 #{fs_block_size}"
             ensure
@@ -263,8 +241,9 @@ class ImageBuilder < Rake::TaskLib
             end
           end
 
-          task :grub_files do
-            install_grub :stage_files => %w{e2fs_stage1_5 stage?}
+          task :extlinux_files do
+            mkdir "boot/extlinux"
+            install "boot/extlinux", "extlinux/extlinux.conf"
           end
 
           task :copy => "dist:clean" do
@@ -278,20 +257,21 @@ class ImageBuilder < Rake::TaskLib
             end
           end
 
-
-          task :grub do
-            IO.popen("sudo grub --device-map=/dev/null","w") { |grub| 
-              grub.puts "device (hd0) #{disk_file}"
-              grub.puts "root (hd0,0)"
-              grub.puts "setup (hd0)"
-              grub.puts "quit"
-            }
+          task :extlinux do
+            begin
+              sudo "mount -o loop,offset=#{fs_offset} #{disk_file} #{mount_dir}"
+              sudo "extlinux --install -H16 -S63 #{mount_dir}/boot/extlinux"
+            ensure
+              sudo "umount #{mount_dir}"
+            end
+            # install MBR
+            sudo "dd if=/usr/lib/syslinux/mbr.bin of=#{disk_file} conv=notrunc"
           end
 
         end
 
         desc "Create a disk image"
-        task :disk => %w{file fs grub_files copy grub}.collect { |t| "disk:#{t}" }
+        task :disk => %w{file fs extlinux_files copy extlinux}.collect { |t| "disk:#{t}" }
 
       end
 
@@ -349,6 +329,8 @@ class ImageBuilder < Rake::TaskLib
       install "etc/apt/sources.list.d", "apt/tryphon.list"
 
       chroot do |chroot|
+        chroot.apt_install "curl"
+        chroot.sudo "curl http://debian.tryphon.org/release.asc | apt-key add -"
         chroot.sudo "apt-get update"
       end
     end
@@ -356,7 +338,7 @@ class ImageBuilder < Rake::TaskLib
     configure :kernel do
       install "etc", "kernel-img.conf"
 
-      packages = %w{linux-image-2.6-686 grub}
+      packages = %w{linux-image-2.6-686}
       chroot do |chroot|
         chroot.apt_install packages
       end
@@ -365,24 +347,28 @@ class ImageBuilder < Rake::TaskLib
     configure :alsa_backup do
       mkdir "etc/pige"
       install "etc/pige", "pige/alsa.backup.config"
-      install "etc/init.d/alsa.backup", "pige/alsa.backup.init.d"
+      # install "etc/init.d/alsa.backup", "pige/alsa.backup.init.d"
       install "etc/default/alsa.backup", "pige/alsa.backup.default"
+
+      chroot do |chroot|
+        chroot.apt_install "alsa-backup"
+      end
 
       # TODO use a debian package
       chroot do |chroot|
-        chroot.apt_install %w{rubygems ruby-dev build-essential rake libasound2 libsndfile1 libdaemons-ruby1.8 libffi-ruby}
-        chroot.sudo "ln -fs /usr/bin/rake1.8 /usr/bin/rake"
+        # chroot.apt_install %w{rubygems ruby-dev build-essential rake libasound2 libsndfile1 libdaemons-ruby1.8 libffi-ruby1.8}
+        # chroot.sudo "ln -fs /usr/bin/rake1.8 /usr/bin/rake"
         
-        chroot.gem_install %w{SyslogLogger}
-        chroot.gem_install "albanpeignier-alsa-backup", :source => "http://gems.github.com"
+        # chroot.gem_install %w{SyslogLogger}
+        # chroot.gem_install "albanpeignier-alsa-backup", :source => "http://gems.github.com"
         
-        chroot.sudo "ln -fs /var/lib/gems/1.8/bin/alsa.backup /usr/bin/alsa.backup"
-        chroot.sudo "ln -fs /usr/lib/libasound.so.2.0.0 /usr/lib/libasound.so"
-        chroot.sudo "ln -fs /usr/lib/libsndfile.so.1.0.17 /usr/lib/libsndfile.so"
-        chroot.sudo "update-rc.d alsa.backup defaults"
+        # chroot.sudo "ln -fs /var/lib/gems/1.8/bin/alsa.backup /usr/bin/alsa.backup"
+        # chroot.sudo "ln -fs /usr/lib/libasound.so.2.0.0 /usr/lib/libasound.so"
+        # chroot.sudo "ln -fs /usr/lib/libsndfile.so.1.0.17 /usr/lib/libsndfile.so"
+        # chroot.sudo "update-rc.d alsa.backup defaults"
 
-        chroot.sudo "adduser --system --no-create-home --disabled-password --disabled-login pige"
-        chroot.sudo "adduser pige audio"
+        # chroot.sudo "adduser --system --no-create-home --disabled-password --disabled-login pige"
+        # chroot.sudo "adduser pige audio"
       end
     end
 
