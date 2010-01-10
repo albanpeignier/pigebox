@@ -32,3 +32,10 @@ class network::dhcp::readonly {
 class network::ifplugd {
   package { ifplugd: }
 }
+
+class network::hostname {
+  file { "/etc/hostname": 
+    content => "pigebox"
+  }
+  host { pigebox: ip => "127.0.1.1" }
+}

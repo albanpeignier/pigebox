@@ -1,0 +1,3 @@
+class syslog {
+  package { rsyslog: }
+}
