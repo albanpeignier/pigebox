@@ -2,7 +2,7 @@ require 'rake/tasklib'
 require 'find'
 require 'tempfile'
 
-require 'rubygems'
+$: << "#{File.dirname(__FILE__)}/../lib"
 require 'syslog_logger'
 
 module PigeCron
