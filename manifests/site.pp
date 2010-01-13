@@ -28,6 +28,7 @@ include munin::readonly
 include munin-node
 
 include apt::local
+include kernel
 
 include alsa::common
 include pige
